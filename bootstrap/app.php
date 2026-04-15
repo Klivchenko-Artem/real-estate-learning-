@@ -1,11 +1,7 @@
 <?php
 
-use App\Facades\BaseData;
 use App\Http\Middleware\AuthenticateAdmin;
 use App\Http\Middleware\HandleInertiaRequests;
-use App\Http\Middleware\TrimStrings;
-use App\Http\Middleware\TrustProxies;
-use App\Http\Middleware\UserStatusMiddleware;
 use Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse;
 use Illuminate\Cookie\Middleware\EncryptCookies;
 use Illuminate\Foundation\Application;
@@ -15,13 +11,12 @@ use Illuminate\Foundation\Http\Middleware\ConvertEmptyStringsToNull;
 use Illuminate\Foundation\Http\Middleware\ValidateCsrfToken;
 use Illuminate\Foundation\Http\Middleware\ValidatePostSize;
 use Illuminate\Http\Middleware\HandleCors;
+use Illuminate\Foundation\Http\Middleware\TrimStrings;
+use Illuminate\Http\Middleware\TrustProxies;
 use Illuminate\Routing\Middleware\SubstituteBindings;
 use Illuminate\Session\Middleware\StartSession;
 use Illuminate\View\Middleware\ShareErrorsFromSession;
-use Inertia\Inertia;
-use Illuminate\Http\Request;
 use Spatie\Permission\Middleware\RoleMiddleware;
-use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -55,29 +50,9 @@ return Application::configure(basePath: dirname(__DIR__))
 
         $middleware->alias([
             'auth.admin' => AuthenticateAdmin::class,
-            'role' => RoleMiddleware::class,
+            'role'       => RoleMiddleware::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {
-        $exceptions->dontFlash([
-            'current_password',
-            'password',
-            'password_confirmation',
-        ]);
-
-        $exceptions->renderable(function (NotFoundHttpException $e, Request $request) {
-            return Inertia::render('ErrorPage', [
-                'base' => BaseData::get(),
-                'status' => $e->getStatusCode(),
-                'message' => $e->getMessage(),
-                'seo' => [
-                    'title' => 'Страница не найдена - Click Haus',
-                    'meta_description' => 'Страница не найдена. Вернитесь на главную страницу Click Haus.',
-                    'og_title' => 'Страница не найдена - Click Haus',
-                    'og_description' => 'Страница не найдена. Вернитесь на главную страницу Click Haus.',
-                ]
-            ])
-                ->toResponse($request)
-                ->setStatusCode($e->getStatusCode());
-        });
+        $exceptions->dontFlash(['current_password', 'password', 'password_confirmation']);
     })->create();
