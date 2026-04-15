@@ -55,18 +55,15 @@
 									class="modal__input"
 									required
 								/>
-								<input
+												<PhoneInput
 									v-model="form.phone"
-									type="tel"
-									placeholder="Телефон"
-									class="modal__input"
-									required
+									input-class="modal__input"
 								/>
 							</div>
 							<button type="submit" class="btn btn--primary" :disabled="submitting" style="width:100%;justify-content:center">
 								{{ submitting ? 'Отправляю...' : 'Отправить заявку' }}
 							</button>
-							<p v-if="success" class="modal__success">✓ Заявка принята! Мы свяжемся с вами.</p>
+							<p v-if="flashSuccess" class="modal__success">✓ Заявка принята! Мы свяжемся с вами.</p>
 						</form>
 					</div>
 				</div>
@@ -76,23 +73,27 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch } from "vue";
-import { router } from "@inertiajs/vue3";
+import { ref, computed, watch } from "vue";
+import { router, usePage } from "@inertiajs/vue3";
+import { useFormatPrice } from "@/composables/useFormatPrice";
+import PhoneInput from "@/components/shared/PhoneInput.vue";
 
 const props = defineProps<{ property: any }>();
 const emit = defineEmits(["close"]);
 
+const { formatPrice } = useFormatPrice();
+const page = usePage();
+const flashSuccess = computed(() => (page.props as any).flash?.success);
+
 const form = ref({ name: "", phone: "" });
 const submitting = ref(false);
-const success = ref(false);
 
-// Close on Escape
 const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") emit("close"); };
 watch(() => props.property, (val) => {
 	if (val) {
 		document.addEventListener("keydown", onKey);
 		document.body.style.overflow = "hidden";
-		success.value = false;
+		form.value = { name: "", phone: "" };
 	} else {
 		document.removeEventListener("keydown", onKey);
 		document.body.style.overflow = "";
@@ -103,14 +104,10 @@ const submit = () => {
 	submitting.value = true;
 	router.post("/feedback", form.value, {
 		preserveScroll: true,
-		onSuccess: () => { success.value = true; form.value = { name: "", phone: "" }; },
+		preserveState: true,
+		onSuccess: () => { form.value = { name: "", phone: "" }; },
 		onFinish: () => { submitting.value = false; },
 	});
-};
-
-const formatPrice = (price: number) => {
-	if (price >= 1_000_000) return (price / 1_000_000).toFixed(1).replace(".0", "") + " млн ₽";
-	return price.toLocaleString("ru") + " ₽";
 };
 </script>
 

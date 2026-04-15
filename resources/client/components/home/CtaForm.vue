@@ -8,13 +8,23 @@
                 </div>
                 <form class="cta-form" @submit.prevent="submit">
                     <div class="cta-form__row">
-                        <input v-model="form.name" type="text" placeholder="Ваше имя" class="cta-form__input" required />
-                        <input v-model="form.phone" type="tel" placeholder="Телефон" class="cta-form__input" required />
+                        <input
+                            v-model="form.name"
+                            type="text"
+                            placeholder="Ваше имя"
+                            class="cta-form__input"
+                            required
+                        />
+                        <PhoneInput
+                            v-model="form.phone"
+                            input-class="cta-form__input"
+                            required
+                        />
                     </div>
                     <button type="submit" class="btn btn--primary" :disabled="submitting">
-                        {{ submitting ? 'Отправляю...' : 'Оставить заявку' }}
+                        {{ submitting ? "Отправляю..." : "Оставить заявку" }}
                     </button>
-                    <p v-if="success" class="cta-form__success">✓ Заявка принята! Мы свяжемся с вами.</p>
+                    <p v-if="flashSuccess" class="cta-form__success">✓ Заявка принята! Мы свяжемся с вами.</p>
                 </form>
             </div>
         </div>
@@ -22,21 +32,22 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from "vue";
-import { router } from "@inertiajs/vue3";
+import { ref, computed } from "vue";
+import { router, usePage } from "@inertiajs/vue3";
+import PhoneInput from "@/components/shared/PhoneInput.vue";
+
+const page = usePage();
+const flashSuccess = computed(() => (page.props as any).flash?.success);
 
 const form = ref({ name: "", phone: "" });
 const submitting = ref(false);
-const success = ref(false);
 
 const submit = () => {
     submitting.value = true;
     router.post("/feedback", form.value, {
         preserveScroll: true,
-        onSuccess: () => {
-            success.value = true;
-            form.value = { name: "", phone: "" };
-        },
+        preserveState: true,
+        onSuccess: () => { form.value = { name: "", phone: "" }; },
         onFinish: () => { submitting.value = false; },
     });
 };

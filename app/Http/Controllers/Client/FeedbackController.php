@@ -13,7 +13,7 @@ class FeedbackController extends Controller
     {
         $request->validate([
             'name'    => 'required|string|max:255',
-            'phone'   => 'required|string|max:50',
+            'phone'   => ['required', 'string', 'regex:/^\+7\d{10}$/'],
             'email'   => 'nullable|email|max:255',
             'message' => 'nullable|string|max:2000',
         ]);
