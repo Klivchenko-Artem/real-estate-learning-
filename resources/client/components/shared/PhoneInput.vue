@@ -7,11 +7,12 @@
             :class="[inputClass, { 'is-invalid': touched && !isValid }]"
             @focus="onFocus"
             @blur="onBlur"
-            @input="onInput"
             @keydown="onKeydown"
+            @input="onInput"
+            @paste="onPaste"
         />
         <span v-if="touched && !isValid" class="phone-field__error">
-            Введите номер полностью: +7XXXXXXXXXX
+            Введите номер: +7 и 10 цифр
         </span>
     </div>
 </template>
@@ -28,10 +29,21 @@ const props = defineProps<{
 const emit = defineEmits<{ "update:modelValue": [value: string] }>();
 
 const PREFIX = "+7";
-const touched = ref(false);
+const MAX_DIGITS = 11; // 7 + 10
 
-// Valid = +7 + exactly 10 digits
+const touched = ref(false);
 const isValid = computed(() => /^\+7\d{10}$/.test(props.modelValue));
+
+// Digits currently in the value (including the 7 from +7)
+const currentDigitCount = () => props.modelValue.replace(/\D/g, "").length;
+
+const applyFormat = (raw: string): string => {
+    let digits = raw.replace(/\D/g, "");
+    // Normalize leading 7 or 8
+    if (digits.startsWith("7") || digits.startsWith("8")) digits = digits.slice(1);
+    digits = digits.slice(0, 10); // max 10 digits after country code
+    return PREFIX + digits;
+};
 
 const onFocus = () => {
     if (!props.modelValue) emit("update:modelValue", PREFIX);
@@ -39,40 +51,61 @@ const onFocus = () => {
 
 const onBlur = () => {
     touched.value = true;
-    if (props.modelValue === PREFIX) emit("update:modelValue", "");
+    if (props.modelValue === PREFIX || !props.modelValue) {
+        emit("update:modelValue", "");
+    }
 };
 
-const onInput = (e: Event) => {
-    const input = e.target as HTMLInputElement;
-    let digits = input.value.replace(/\D/g, "");
-
-    if (!digits) { emit("update:modelValue", PREFIX); return; }
-
-    if (digits[0] === "7" || digits[0] === "8") digits = digits.slice(1);
-    digits = digits.slice(0, 10);
-
-    const formatted = PREFIX + digits;
-    emit("update:modelValue", formatted);
-
-    nextTick(() => {
-        input.setSelectionRange(formatted.length, formatted.length);
-    });
-};
+const CONTROL_KEYS = ["Backspace", "Delete", "ArrowLeft", "ArrowRight", "Tab", "Enter", "Home", "End"];
 
 const onKeydown = (e: KeyboardEvent) => {
-    const { selectionStart, selectionEnd } = e.target as HTMLInputElement;
+    const input = e.target as HTMLInputElement;
+    const { selectionStart, selectionEnd } = input;
 
-    if (
-        (e.key === "Backspace" || e.key === "Delete") &&
-        selectionStart !== null &&
-        selectionStart <= PREFIX.length &&
-        (selectionEnd === selectionStart || (selectionEnd !== null && selectionEnd <= PREFIX.length))
-    ) {
+    // Allow control combos (Ctrl+A, Ctrl+C, etc.)
+    if (e.ctrlKey || e.metaKey) return;
+
+    // Allow control keys
+    if (CONTROL_KEYS.includes(e.key)) {
+        // Block deletion of +7 prefix
+        if ((e.key === "Backspace" || e.key === "Delete") &&
+            selectionStart !== null && selectionStart <= PREFIX.length &&
+            selectionStart === selectionEnd) {
+            e.preventDefault();
+        }
+        return;
+    }
+
+    // Block non-digits
+    if (!/^\d$/.test(e.key)) {
+        e.preventDefault();
+        return;
+    }
+
+    // Block if already at max
+    if (currentDigitCount() >= MAX_DIGITS && selectionStart === selectionEnd) {
         e.preventDefault();
     }
 };
 
-// Expose validity so parent forms can check before submit
+const onInput = (e: Event) => {
+    const input = e.target as HTMLInputElement;
+    const formatted = applyFormat(input.value);
+    emit("update:modelValue", formatted);
+
+    nextTick(() => {
+        const pos = Math.max(formatted.length, PREFIX.length);
+        input.setSelectionRange(pos, pos);
+    });
+};
+
+const onPaste = (e: ClipboardEvent) => {
+    e.preventDefault();
+    const text = e.clipboardData?.getData("text") ?? "";
+    const formatted = applyFormat((props.modelValue ?? "") + text);
+    emit("update:modelValue", formatted);
+};
+
 defineExpose({ isValid, touched });
 </script>
 
@@ -80,14 +113,18 @@ defineExpose({ isValid, touched });
 .phone-field {
     flex: 1;
     min-width: 160px;
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
+    position: relative;
 }
 
 .phone-field__error {
-    font-size: 12px;
+    position: absolute;
+    top: calc(100% + 4px);
+    left: 0;
+    font-size: 11px;
     color: #f87171;
+    white-space: nowrap;
+    pointer-events: none;
+    z-index: 10;
 }
 
 .is-invalid {

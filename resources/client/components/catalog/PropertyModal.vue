@@ -75,7 +75,7 @@
 
 <script setup lang="ts">
 import { ref, computed, watch } from "vue";
-import { router, usePage } from "@inertiajs/vue3";
+import { useForm, usePage } from "@inertiajs/vue3";
 import { useFormatPrice } from "@/composables/useFormatPrice";
 import PhoneInput from "@/components/shared/PhoneInput.vue";
 
@@ -86,16 +86,15 @@ const { formatPrice } = useFormatPrice();
 const page = usePage();
 const flashSuccess = computed(() => (page.props as any).flash?.success);
 
-const form = ref({ name: "", phone: "" });
-const submitting = ref(false);
 const phoneRef = ref<InstanceType<typeof PhoneInput> | null>(null);
+const form = useForm({ name: "", phone: "" });
 
 const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") emit("close"); };
 watch(() => props.property, (val) => {
 	if (val) {
 		document.addEventListener("keydown", onKey);
 		document.body.style.overflow = "hidden";
-		form.value = { name: "", phone: "" };
+		form.reset();
 	} else {
 		document.removeEventListener("keydown", onKey);
 		document.body.style.overflow = "";
@@ -106,12 +105,10 @@ const submit = () => {
 	if (phoneRef.value) phoneRef.value.touched = true;
 	if (!phoneRef.value?.isValid) return;
 
-	submitting.value = true;
-	router.post("/feedback", form.value, {
+	form.post("/feedback", {
 		preserveScroll: true,
 		preserveState: true,
-		onSuccess: () => { form.value = { name: "", phone: "" }; },
-		onFinish: () => { submitting.value = false; },
+		onSuccess: () => form.reset(),
 	});
 };
 </script>

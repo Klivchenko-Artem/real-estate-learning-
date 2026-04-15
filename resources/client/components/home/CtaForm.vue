@@ -33,27 +33,23 @@
 
 <script setup lang="ts">
 import { ref, computed } from "vue";
-import { router, usePage } from "@inertiajs/vue3";
+import { useForm, usePage } from "@inertiajs/vue3";
 import PhoneInput from "@/components/shared/PhoneInput.vue";
 
 const page = usePage();
 const flashSuccess = computed(() => (page.props as any).flash?.success);
 
-const form = ref({ name: "", phone: "" });
-const submitting = ref(false);
 const phoneRef = ref<InstanceType<typeof PhoneInput> | null>(null);
+const form = useForm({ name: "", phone: "" });
 
 const submit = () => {
-    // Force show validation error if phone not touched yet
     if (phoneRef.value) phoneRef.value.touched = true;
     if (!phoneRef.value?.isValid) return;
 
-    submitting.value = true;
-    router.post("/feedback", form.value, {
+    form.post("/feedback", {
         preserveScroll: true,
         preserveState: true,
-        onSuccess: () => { form.value = { name: "", phone: "" }; },
-        onFinish: () => { submitting.value = false; },
+        onSuccess: () => form.reset(),
     });
 };
 </script>
