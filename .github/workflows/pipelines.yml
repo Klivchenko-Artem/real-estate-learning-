@@ -1,0 +1,153 @@
+name: Laravel CI/CD
+
+on:
+  push:
+    branches: [ master, dev ]
+  pull_request:
+    branches: [ master, dev ]
+
+jobs:
+  build_and_test:
+    name: Build & Test
+    runs-on: ubuntu-latest
+
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: laravel_test
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h localhost -uroot -proot"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=3
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup PHP 8.3
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: mbstring, bcmath, pdo_mysql, intl, pcntl
+          coverage: none
+          tools: composer:v2
+
+      - name: Cache Composer dependencies
+        uses: actions/cache@v4
+        with:
+          path: vendor
+          key: composer-${{ hashFiles('composer.lock') }}
+          restore-keys: composer-
+
+      - name: Install Composer dependencies
+        run: composer install --no-interaction --no-progress --prefer-dist
+
+      - name: Prepare environment
+        run: cp .env.example .env
+
+      - name: Generate app key
+        run: php artisan key:generate
+
+      - name: Run migrations
+        env:
+          DB_CONNECTION: mysql
+          DB_HOST: 127.0.0.1
+          DB_PORT: 3306
+          DB_DATABASE: laravel_test
+          DB_USERNAME: root
+          DB_PASSWORD: root
+        run: php artisan migrate --force
+
+      - name: Setup Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: 'yarn'
+
+      - name: Cache Yarn dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            node_modules
+            ~/.cache/yarn
+          key: yarn-${{ hashFiles('yarn.lock') }}
+          restore-keys: yarn-
+
+      - name: Build frontend assets
+        run: yarn prod
+
+      - name: Run Laravel tests
+        env:
+          APP_ENV: testing
+          DB_CONNECTION: mysql
+          DB_HOST: 127.0.0.1
+          DB_PORT: 3306
+          DB_DATABASE: laravel_test
+          DB_USERNAME: root
+          DB_PASSWORD: root
+        run: php artisan test --stop-on-failure
+
+  deploy_prod:
+    name: Deploy to Production
+    needs: build_and_test
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/master'
+
+    steps:
+      - name: Setup SSH
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+
+      - name: Deploy to Production Server
+        run: |
+          ssh -o StrictHostKeyChecking=no ${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }} << 'EOF'
+          cd ${{ secrets.DEPLOY_PATH_PROD }}
+          git pull origin master
+          /usr/local/bin/php8.3 ~/.local/bin/composer install --optimize-autoloader
+          nvm use 22
+          yarn prod
+          /usr/local/bin/php8.3 ${{ secrets.DEPLOY_PATH_PROD }}/artisan migrate --force
+          /usr/local/bin/php8.3 ${{ secrets.DEPLOY_PATH_PROD }}/artisan config:cache
+          /usr/local/bin/php8.3 ${{ secrets.DEPLOY_PATH_PROD }}/artisan route:cache
+          /usr/local/bin/php8.3 ${{ secrets.DEPLOY_PATH_PROD }}/artisan view:cache
+          
+           # Start Inertia SSR server in background
+          nohup /usr/local/bin/php8.3 ${{ secrets.DEPLOY_PATH_PROD }}/artisan inertia:start-ssr > /dev/null 2>&1 &
+          disown
+          EOF
+
+  deploy_dev:
+    name: Deploy to Development Server
+    needs: build_and_test
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/dev'
+
+    steps:
+      - name: Setup SSH
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+
+      - name: Deploy to Dev Server
+        run: |
+          ssh -o StrictHostKeyChecking=no ${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }} << 'EOF'
+          cd ${{ secrets.DEPLOY_PATH_DEV }}
+          git pull origin dev
+          /usr/local/bin/php8.3 ~/.local/bin/composer install --optimize-autoloader
+          nvm use 22
+          yarn prod
+          /usr/local/bin/php8.3 ${{ secrets.DEPLOY_PATH_DEV }}/artisan migrate --force
+          /usr/local/bin/php8.3 ${{ secrets.DEPLOY_PATH_DEV }}/artisan config:cache
+          /usr/local/bin/php8.3 ${{ secrets.DEPLOY_PATH_DEV }}/artisan route:cache
+          /usr/local/bin/php8.3 ${{ secrets.DEPLOY_PATH_DEV }}/artisan view:cache
+          
+           # Start Inertia SSR server in background
+          nohup /usr/local/bin/php8.3 ${{ secrets.DEPLOY_PATH_DEV }}/artisan inertia:start-ssr > /dev/null 2>&1 &
+          disown
+          EOF

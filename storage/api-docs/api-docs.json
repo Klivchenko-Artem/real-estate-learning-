@@ -1,0 +1,88 @@
+{
+    "openapi": "3.0.0",
+    "info": {
+        "title": "Click-house",
+        "version": "0.1"
+    },
+    "paths": {
+        "/api/feedback/create": {
+            "post": {
+                "tags": [
+                    "Форма обратной связи"
+                ],
+                "description": "Оставить заявку",
+                "operationId": "create",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "properties": {
+                                    "page": {
+                                        "type": "string",
+                                        "example": "/contacts"
+                                    },
+                                    "page_title": {
+                                        "type": "string",
+                                        "example": "Контакты"
+                                    },
+                                    "name": {
+                                        "type": "string",
+                                        "example": "Иванов Иван Иванович"
+                                    },
+                                    "phone": {
+                                        "type": "string",
+                                        "example": "+79000000000"
+                                    },
+                                    "city": {
+                                        "type": "string",
+                                        "example": "Москва",
+                                        "nullable": "true"
+                                    },
+                                    "comment": {
+                                        "type": "string",
+                                        "example": "Комментарий",
+                                        "nullable": "true"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    },
+                    "422": {
+                        "description": "Wrong data response"
+                    }
+                }
+            }
+        },
+        "/api/cookie/hide-preloader": {
+            "post": {
+                "tags": [
+                    "Куки"
+                ],
+                "description": "Скрыть прелоадер",
+                "operationId": "hide-preloader",
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    }
+                }
+            }
+        }
+    },
+    "tags": [
+        {
+            "name": "Форма обратной связи",
+            "description": "Форма обратной связи"
+        },
+        {
+            "name": "Куки",
+            "description": "Куки"
+        }
+    ]
+}
