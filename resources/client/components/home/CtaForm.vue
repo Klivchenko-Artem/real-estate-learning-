@@ -16,9 +16,9 @@
                             required
                         />
                         <PhoneInput
+                            ref="phoneRef"
                             v-model="form.phone"
                             input-class="cta-form__input"
-                            required
                         />
                     </div>
                     <button type="submit" class="btn btn--primary" :disabled="submitting">
@@ -41,8 +41,13 @@ const flashSuccess = computed(() => (page.props as any).flash?.success);
 
 const form = ref({ name: "", phone: "" });
 const submitting = ref(false);
+const phoneRef = ref<InstanceType<typeof PhoneInput> | null>(null);
 
 const submit = () => {
+    // Force show validation error if phone not touched yet
+    if (phoneRef.value) phoneRef.value.touched = true;
+    if (!phoneRef.value?.isValid) return;
+
     submitting.value = true;
     router.post("/feedback", form.value, {
         preserveScroll: true,

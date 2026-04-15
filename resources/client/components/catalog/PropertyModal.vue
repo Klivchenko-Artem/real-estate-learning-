@@ -55,7 +55,8 @@
 									class="modal__input"
 									required
 								/>
-												<PhoneInput
+													<PhoneInput
+									ref="phoneRef"
 									v-model="form.phone"
 									input-class="modal__input"
 								/>
@@ -87,6 +88,7 @@ const flashSuccess = computed(() => (page.props as any).flash?.success);
 
 const form = ref({ name: "", phone: "" });
 const submitting = ref(false);
+const phoneRef = ref<InstanceType<typeof PhoneInput> | null>(null);
 
 const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") emit("close"); };
 watch(() => props.property, (val) => {
@@ -101,6 +103,9 @@ watch(() => props.property, (val) => {
 });
 
 const submit = () => {
+	if (phoneRef.value) phoneRef.value.touched = true;
+	if (!phoneRef.value?.isValid) return;
+
 	submitting.value = true;
 	router.post("/feedback", form.value, {
 		preserveScroll: true,
