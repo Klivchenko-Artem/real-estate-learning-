@@ -4,21 +4,18 @@
             type="tel"
             :value="modelValue"
             :placeholder="placeholder ?? 'Телефон'"
-            :class="[inputClass, { 'is-invalid': touched && !isValid }]"
+            :class="inputClass"
             @focus="onFocus"
             @blur="onBlur"
             @keydown="onKeydown"
             @input="onInput"
             @paste="onPaste"
         />
-        <span v-if="touched && !isValid" class="phone-field__error">
-            Введите номер: +7 и 10 цифр
-        </span>
     </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, nextTick } from "vue";
+import { ref, computed, watch, nextTick } from "vue";
 
 const props = defineProps<{
     modelValue: string;
@@ -33,6 +30,11 @@ const MAX_DIGITS = 11; // 7 + 10
 
 const touched = ref(false);
 const isValid = computed(() => /^\+7\d{10}$/.test(props.modelValue));
+
+// Сбрасываем touched когда форма очищается
+watch(() => props.modelValue, (val) => {
+    if (!val) touched.value = false;
+});
 
 // Digits currently in the value (including the 7 from +7)
 const currentDigitCount = () => props.modelValue.replace(/\D/g, "").length;
@@ -113,21 +115,5 @@ defineExpose({ isValid, touched });
 .phone-field {
     flex: 1;
     min-width: 160px;
-    position: relative;
-}
-
-.phone-field__error {
-    position: absolute;
-    top: calc(100% + 4px);
-    left: 0;
-    font-size: 11px;
-    color: #f87171;
-    white-space: nowrap;
-    pointer-events: none;
-    z-index: 10;
-}
-
-.is-invalid {
-    border-color: #f87171 !important;
 }
 </style>
