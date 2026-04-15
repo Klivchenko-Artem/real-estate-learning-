@@ -114,6 +114,24 @@ const submit = () => {
         &:focus { border-color: $color-accent; }
     }
 
+    :deep(.cta-form__input) {
+        flex: 1;
+        min-width: 160px;
+        padding: 12px 16px;
+        background: $color-bg-3;
+        border: 1px solid $color-border;
+        border-radius: $radius-sm;
+        color: $color-text;
+        font-size: 15px;
+        outline: none;
+        transition: border-color $transition;
+        font-family: $font-main;
+        width: 100%;
+
+        &::placeholder { color: $color-text-muted; }
+        &:focus { border-color: $color-accent; }
+    }
+
     &__success {
         font-size: 14px;
         color: #4ade80;

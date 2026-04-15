@@ -292,6 +292,24 @@ const submit = () => {
 		&:focus { border-color: $color-accent; }
 	}
 
+	:deep(.modal__input) {
+		flex: 1;
+		padding: 10px 14px;
+		background: $color-bg-3;
+		border: 1px solid $color-border;
+		border-radius: $radius-sm;
+		color: $color-text;
+		font-size: 14px;
+		outline: none;
+		font-family: $font-main;
+		transition: border-color $transition;
+		min-width: 0;
+		width: 100%;
+
+		&::placeholder { color: $color-text-muted; }
+		&:focus { border-color: $color-accent; }
+	}
+
 	&__success {
 		font-size: 13px;
 		color: #4ade80;
